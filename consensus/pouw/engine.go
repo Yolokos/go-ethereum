@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
     "github.com/ethereum/go-ethereum/rpc"
     "github.com/ethereum/go-ethereum/trie"
+    "github.com/ethereum/go-ethereum/core/vm"
 )
 
 type Engine struct {
@@ -83,24 +84,27 @@ func (e *Engine) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 func (e *Engine) Finalize(
     chain consensus.ChainHeaderReader,
     header *types.Header,
+    state vm.StateDB,
+    body *types.Body,
+) {
+}
+
+
+func (e *Engine) FinalizeAndAssemble(
+    chain consensus.ChainHeaderReader,
+    header *types.Header,
     state *state.StateDB,
-    txs []*types.Transaction,
-    uncles []*types.Header,
+    body *types.Body,
     receipts []*types.Receipt,
 ) (*types.Block, error) {
+    header.Root = state.IntermediateRoot(false)
 
-    if e.config != nil && header.Number != nil {
-        header.Root = state.IntermediateRoot(e.config.IsEIP158(header.Number))
-    } else {
-        header.Root = state.IntermediateRoot(false)
-    }
-
-    body := &types.Body{
-        Transactions: txs,
-        Uncles:       uncles,
-    }
-
-    return types.NewBlock(header, body, receipts, trie.NewStackTrie(nil)), nil
+    return types.NewBlock(
+        header,
+        body,
+        receipts,
+        trie.NewStackTrie(nil),
+    ), nil
 }
 
 func (e *Engine) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
