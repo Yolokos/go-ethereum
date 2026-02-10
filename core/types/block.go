@@ -106,6 +106,10 @@ type Header struct {
 
 	// RequestsHash was added by EIP-7685 and is ignored in legacy headers.
 	RequestsHash *common.Hash `json:"requestsHash" rlp:"optional"`
+
+	// PoUW fields for custom.
+	PoUWCommitment common.Hash
+    PoUWLoss       uint64
 }
 
 // field type overrides for gencodec
@@ -329,6 +333,12 @@ func CopyHeader(h *Header) *Header {
 		cpy.RequestsHash = new(common.Hash)
 		*cpy.RequestsHash = *h.RequestsHash
 	}
+	if h.PoUWCommitment != (common.Hash{}) {
+		cpy.PoUWCommitment = h.PoUWCommitment
+	}
+	if h.PoUWLoss != 0 {
+		cpy.PoUWLoss = h.PoUWLoss
+	}
 	return &cpy
 }
 
@@ -400,6 +410,8 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
+func (b *Block) PoUWCommitment() common.Hash { return b.header.PoUWCommitment }
+func (b *Block) PoUWLoss() uint64              { return b.header.PoUWLoss }
 
 func (b *Block) BaseFee() *big.Int {
 	if b.header.BaseFee == nil {

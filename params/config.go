@@ -32,6 +32,7 @@ var (
 	HoleskyGenesisHash = common.HexToHash("0xb5f7f912443c940f21fd611f12828d75b534364ed9e95ca4e307729a4661bde4")
 	SepoliaGenesisHash = common.HexToHash("0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9")
 	HoodiGenesisHash   = common.HexToHash("0xbbe312868b376a3001692a646dd2d7d1e4406380dfd86b98aa8a34d1557c971b")
+	PoUWGenesisHash    = common.HexToHash("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef") 
 )
 
 func newUint64(val uint64) *uint64 { return &val }
@@ -434,7 +435,11 @@ type ChainConfig struct {
 	Ethash             *EthashConfig       `json:"ethash,omitempty"`
 	Clique             *CliqueConfig       `json:"clique,omitempty"`
 	BlobScheduleConfig *BlobScheduleConfig `json:"blobSchedule,omitempty"`
+	PoUW 			   *PoUWConfig `json:"pouw,omitempty"`
 }
+
+// PoUWConfig is the consensus engine configs for proof-of-useful-work based sealing.
+type PoUWConfig struct {}
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
 type EthashConfig struct{}
@@ -466,6 +471,8 @@ func (c *ChainConfig) Description() string {
 	}
 	banner += fmt.Sprintf("Chain ID:  %v (%s)\n", c.ChainID, network)
 	switch {
+	case c.PoUW != nil:
+		banner += "Consensus: PoUW (Proof-of-Useful-Work)\n"
 	case c.Ethash != nil:
 		banner += "Consensus: Beacon (proof-of-stake), merged from Ethash (proof-of-work)\n"
 	case c.Clique != nil:

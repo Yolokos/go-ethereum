@@ -620,6 +620,25 @@ func DefaultSepoliaGenesisBlock() *Genesis {
 	}
 }
 
+// НУЖНО ДОДЕЛАТЬ ИЛИ ПЕРЕДЕЛАТЬ
+func DefaultPoUWGenesisBlock() *Genesis {
+	return &Genesis{
+		Config: &params.ChainConfig{
+			ChainID: big.NewInt(12345),
+			PoUW: &params.PoUWConfig{
+				// здесь можно задать параметры PoUW, например initial commitment
+			},
+			TerminalTotalDifficulty: big.NewInt(1), // для совместимости
+		},
+		Nonce:      0x42,                // любое число для уникальности
+		GasLimit:   8000000,             // можно свой лимит
+		Difficulty: big.NewInt(1),       // минимальная сложность
+		Alloc:      GenesisAlloc{}, // начальные аккаунты (можно пусто)
+		ExtraData:  []byte("PoUW Genesis"),
+		Timestamp:  1672531200,          // любое подходящее
+	}
+}
+
 // DefaultHoleskyGenesisBlock returns the Holesky network genesis block.
 func DefaultHoleskyGenesisBlock() *Genesis {
 	return &Genesis{
