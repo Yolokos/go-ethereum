@@ -44,18 +44,18 @@ var (
 // DELETE
 // PayloadAttributes describes the environment context in which a block should
 // be built.
-// type PayloadAttributes struct {
-// 	Timestamp             uint64              `json:"timestamp"             gencodec:"required"`
-// 	Random                common.Hash         `json:"prevRandao"            gencodec:"required"`
-// 	SuggestedFeeRecipient common.Address      `json:"suggestedFeeRecipient" gencodec:"required"`
-// 	Withdrawals           []*types.Withdrawal `json:"withdrawals"`
-// 	BeaconRoot            *common.Hash        `json:"parentBeaconBlockRoot"`
-// }
+type PayloadAttributes struct {
+	Timestamp             uint64              `json:"timestamp"             gencodec:"required"`
+	Random                common.Hash         `json:"prevRandao"            gencodec:"required"`
+	SuggestedFeeRecipient common.Address      `json:"suggestedFeeRecipient" gencodec:"required"`
+	Withdrawals           []*types.Withdrawal `json:"withdrawals"`
+	BeaconRoot            *common.Hash        `json:"parentBeaconBlockRoot"`
+}
 
 // JSON type overrides for PayloadAttributes.
-// type payloadAttributesMarshaling struct {
-// 	Timestamp hexutil.Uint64
-// }
+type payloadAttributesMarshaling struct {
+	Timestamp hexutil.Uint64
+}
 
 //go:generate go run github.com/fjl/gencodec -type ExecutableData -field-override executableDataMarshaling -out gen_ed.go
 
@@ -76,12 +76,12 @@ type ExecutableData struct {
 	BlockHash        common.Hash             `json:"blockHash"     gencodec:"required"`
 	Transactions     [][]byte                `json:"transactions"  gencodec:"required"`
 	// REMOVED
-	// Withdrawals      []*types.Withdrawal     `json:"withdrawals"`
-	// BlobGasUsed      *uint64                 `json:"blobGasUsed"`
-	// ExcessBlobGas    *uint64                 `json:"excessBlobGas"`
+	Withdrawals      []*types.Withdrawal     `json:"withdrawals"`
+	BlobGasUsed      *uint64                 `json:"blobGasUsed"`
+	ExcessBlobGas    *uint64                 `json:"excessBlobGas"`
 	ExecutionWitness *types.ExecutionWitness `json:"executionWitness,omitempty"`
-	PoUWCommitment   common.Hash             `json:"pouwCommitment"`
-	PoUWLoss         uint64                  `json:"pouwLoss"`
+	PoUWCommitment   *common.Hash             `json:"pouwCommitment"`
+	PoUWLoss         *uint64                  `json:"pouwLoss"`
 }
 
 // JSON type overrides for executableData.
@@ -146,11 +146,11 @@ type PayloadStatusV1 struct {
 }
 
 // DELETE
-// type TransitionConfigurationV1 struct {
-// 	TerminalTotalDifficulty *hexutil.Big   `json:"terminalTotalDifficulty"`
-// 	TerminalBlockHash       common.Hash    `json:"terminalBlockHash"`
-// 	TerminalBlockNumber     hexutil.Uint64 `json:"terminalBlockNumber"`
-// }
+type TransitionConfigurationV1 struct {
+	TerminalTotalDifficulty *hexutil.Big   `json:"terminalTotalDifficulty"`
+	TerminalBlockHash       common.Hash    `json:"terminalBlockHash"`
+	TerminalBlockNumber     hexutil.Uint64 `json:"terminalBlockNumber"`
+}
 
 // PayloadID is an identifier of the payload build process
 type PayloadID [8]byte
@@ -181,17 +181,17 @@ func (b *PayloadID) UnmarshalText(input []byte) error {
 	return nil
 }
 
-// type ForkChoiceResponse struct {
-// 	PayloadStatus PayloadStatusV1 `json:"payloadStatus"`
-// 	PayloadID     *PayloadID      `json:"payloadId"`
-// }
+type ForkChoiceResponse struct {
+	PayloadStatus PayloadStatusV1 `json:"payloadStatus"`
+	PayloadID     *PayloadID      `json:"payloadId"`
+}
 
 // DELETE
-// type ForkchoiceStateV1 struct {
-// 	HeadBlockHash      common.Hash `json:"headBlockHash"`
-// 	SafeBlockHash      common.Hash `json:"safeBlockHash"`
-// 	FinalizedBlockHash common.Hash `json:"finalizedBlockHash"`
-// }
+type ForkchoiceStateV1 struct {
+	HeadBlockHash      common.Hash `json:"headBlockHash"`
+	SafeBlockHash      common.Hash `json:"safeBlockHash"`
+	FinalizedBlockHash common.Hash `json:"finalizedBlockHash"`
+}
 
 func encodeTransactions(txs []*types.Transaction) [][]byte {
 	var enc = make([][]byte, len(txs))
@@ -268,11 +268,11 @@ func ExecutableDataToBlockNoHash(data ExecutableData, versionedHashes []common.H
 	// Only set withdrawalsRoot if it is non-nil. This allows CLs to use
 	// ExecutableData before withdrawals are enabled by marshaling
 	// Withdrawals as the json null value.
-	// var withdrawalsRoot *common.Hash
-	// if data.Withdrawals != nil {
-	// 	h := types.DeriveSha(types.Withdrawals(data.Withdrawals), trie.NewStackTrie(nil))
-	// 	withdrawalsRoot = &h
-	// }
+	var withdrawalsRoot *common.Hash
+	if data.Withdrawals != nil {
+		h := types.DeriveSha(types.Withdrawals(data.Withdrawals), trie.NewStackTrie(nil))
+		withdrawalsRoot = &h
+	}
 
 	var requestsHash *common.Hash
 	if requests != nil {
@@ -296,9 +296,9 @@ func ExecutableDataToBlockNoHash(data ExecutableData, versionedHashes []common.H
 		BaseFee:          data.BaseFeePerGas,
 		Extra:            data.ExtraData,
 		MixDigest:        data.Random,
-		// WithdrawalsHash:  withdrawalsRoot,
-		// ExcessBlobGas:    data.ExcessBlobGas,
-		// BlobGasUsed:      data.BlobGasUsed,
+		WithdrawalsHash:  withdrawalsRoot,
+		ExcessBlobGas:    data.ExcessBlobGas,
+		BlobGasUsed:      data.BlobGasUsed,
 		ParentBeaconRoot: beaconRoot,
 		RequestsHash:     requestsHash,
 		
@@ -329,9 +329,9 @@ func BlockToExecutableData(block *types.Block, fees *big.Int, sidecars []*types.
 		Transactions:     encodeTransactions(block.Transactions()),
 		Random:           block.MixDigest(),
 		ExtraData:        block.Extra(),
-		// Withdrawals:      block.Withdrawals(),
-		// BlobGasUsed:      block.BlobGasUsed(),
-		// ExcessBlobGas:    block.ExcessBlobGas(),
+		Withdrawals:      block.Withdrawals(),
+		BlobGasUsed:      block.BlobGasUsed(),
+		ExcessBlobGas:    block.ExcessBlobGas(),
 		ExecutionWitness: block.ExecutionWitness(),
 		PoUWCommitment:   block.PoUWCommitment(),
 		PoUWLoss:         block.PoUWLoss(),
@@ -363,24 +363,24 @@ func BlockToExecutableData(block *types.Block, fees *big.Int, sidecars []*types.
 // ExecutionPayloadBody is used in the response to GetPayloadBodiesByHash and GetPayloadBodiesByRange
 type ExecutionPayloadBody struct {
 	TransactionData []hexutil.Bytes     `json:"transactions"`
-	// Withdrawals     []*types.Withdrawal `json:"withdrawals"`
+	Withdrawals     []*types.Withdrawal `json:"withdrawals"`
 }
 
 // Client identifiers to support ClientVersionV1.
-// const (
-// 	ClientCode = "GE"
-// 	ClientName = "go-ethereum"
-// )
+const (
+	ClientCode = "GE"
+	ClientName = "go-ethereum"
+)
 
 // DELETE
 // ClientVersionV1 contains information which identifies a client implementation.
-// type ClientVersionV1 struct {
-// 	Code    string `json:"code"`
-// 	Name    string `json:"name"`
-// 	Version string `json:"version"`
-// 	Commit  string `json:"commit"`
-// }
+type ClientVersionV1 struct {
+	Code    string `json:"code"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Commit  string `json:"commit"`
+}
 
-// func (v *ClientVersionV1) String() string {
-// 	return fmt.Sprintf("%s-%s-%s-%s", v.Code, v.Name, v.Version, v.Commit)
-// }
+func (v *ClientVersionV1) String() string {
+	return fmt.Sprintf("%s-%s-%s-%s", v.Code, v.Name, v.Version, v.Commit)
+}

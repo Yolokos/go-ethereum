@@ -18,7 +18,7 @@
 package ethconfig
 
 import (
-	"fmt"
+	// "fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -33,7 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
+	// "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -169,10 +169,10 @@ type Config struct {
 // Clique is allowed for now to live standalone, but ethash is forbidden and can
 // only exist on already merged networks.
 func CreateConsensusEngine(config *params.ChainConfig, db ethdb.Database) (consensus.Engine, error) {
-	if config.TerminalTotalDifficulty == nil {
-		log.Error("Geth only supports PoS networks. Please transition legacy networks using Geth v1.13.x.")
-		return nil, fmt.Errorf("'terminalTotalDifficulty' is not set in genesis block")
-	}
+	// if config.TerminalTotalDifficulty == nil {
+	// 	log.Error("Geth only supports PoS networks. Please transition legacy networks using Geth v1.13.x.")
+	// 	return nil, fmt.Errorf("'terminalTotalDifficulty' is not set in genesis block")
+	// }
 
 	if config.PoUW != nil {
 		return pouw.New(config, db), nil

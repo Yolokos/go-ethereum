@@ -26,7 +26,7 @@ func (p PayloadAttributes) MarshalJSON() ([]byte, error) {
 	enc.Timestamp = hexutil.Uint64(p.Timestamp)
 	enc.Random = p.Random
 	enc.SuggestedFeeRecipient = p.SuggestedFeeRecipient
-	enc.Withdrawals = p.Withdrawals
+	// enc.Withdrawals = p.Withdrawals
 	enc.BeaconRoot = p.BeaconRoot
 	return json.Marshal(&enc)
 }
@@ -37,7 +37,7 @@ func (p *PayloadAttributes) UnmarshalJSON(input []byte) error {
 		Timestamp             *hexutil.Uint64     `json:"timestamp"             gencodec:"required"`
 		Random                *common.Hash        `json:"prevRandao"            gencodec:"required"`
 		SuggestedFeeRecipient *common.Address     `json:"suggestedFeeRecipient" gencodec:"required"`
-		Withdrawals           []*types.Withdrawal `json:"withdrawals"`
+		// Withdrawals           []*types.Withdrawal `json:"withdrawals"`
 		BeaconRoot            *common.Hash        `json:"parentBeaconBlockRoot"`
 	}
 	var dec PayloadAttributes
@@ -56,9 +56,9 @@ func (p *PayloadAttributes) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'suggestedFeeRecipient' for PayloadAttributes")
 	}
 	p.SuggestedFeeRecipient = *dec.SuggestedFeeRecipient
-	if dec.Withdrawals != nil {
-		p.Withdrawals = dec.Withdrawals
-	}
+	// if dec.Withdrawals != nil {
+	// 	p.Withdrawals = dec.Withdrawals
+	// }
 	if dec.BeaconRoot != nil {
 		p.BeaconRoot = dec.BeaconRoot
 	}

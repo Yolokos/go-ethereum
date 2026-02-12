@@ -108,8 +108,8 @@ type Header struct {
 	RequestsHash *common.Hash `json:"requestsHash" rlp:"optional"`
 
 	// PoUW fields for custom.
-	PoUWCommitment common.Hash
-    PoUWLoss       uint64
+	PoUWCommitment *common.Hash `json:"pouwCommitment" rlp:"optional"`
+	PoUWLoss       *uint64      `json:"pouwLoss" rlp:"optional"`
 }
 
 // field type overrides for gencodec
@@ -333,10 +333,10 @@ func CopyHeader(h *Header) *Header {
 		cpy.RequestsHash = new(common.Hash)
 		*cpy.RequestsHash = *h.RequestsHash
 	}
-	if h.PoUWCommitment != (common.Hash{}) {
+	if h.PoUWCommitment != nil {
 		cpy.PoUWCommitment = h.PoUWCommitment
 	}
-	if h.PoUWLoss != 0 {
+	if h.PoUWLoss != nil {
 		cpy.PoUWLoss = h.PoUWLoss
 	}
 	return &cpy
@@ -410,8 +410,6 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash   { return b.header.UncleHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
-func (b *Block) PoUWCommitment() common.Hash { return b.header.PoUWCommitment }
-func (b *Block) PoUWLoss() uint64              { return b.header.PoUWLoss }
 
 func (b *Block) BaseFee() *big.Int {
 	if b.header.BaseFee == nil {
@@ -460,6 +458,20 @@ func (b *Block) Size() uint64 {
 // stuffed with junk data to add processing overhead
 func (b *Block) SanityCheck() error {
 	return b.header.SanityCheck()
+}
+
+func (b *Block) PoUWCommitment() *common.Hash {
+	if b.header.PoUWCommitment == nil {
+		return nil
+	}
+	return b.header.PoUWCommitment
+}
+
+func (b *Block) PoUWLoss() *uint64 {
+	if b.header.PoUWLoss == nil {
+		return nil
+	}
+	return b.header.PoUWLoss
 }
 
 type writeCounter uint64

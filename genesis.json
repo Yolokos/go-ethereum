@@ -1,0 +1,13 @@
+{
+  "config": {
+    "chainId": 12345,
+    "poUW": {},
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0
+  },
+  "difficulty": "0x1",
+  "gasLimit": "0x1C9C380",
+  "alloc": {}
+}

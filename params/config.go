@@ -435,7 +435,7 @@ type ChainConfig struct {
 	Ethash             *EthashConfig       `json:"ethash,omitempty"`
 	Clique             *CliqueConfig       `json:"clique,omitempty"`
 	BlobScheduleConfig *BlobScheduleConfig `json:"blobSchedule,omitempty"`
-	PoUW 			   *PoUWConfig `json:"pouw,omitempty"`
+	PoUW 			   *PoUWConfig 		   `json:"pouw,omitempty"`
 }
 
 // PoUWConfig is the consensus engine configs for proof-of-useful-work based sealing.
