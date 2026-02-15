@@ -94,16 +94,16 @@ func (e *Engine) Author(header *types.Header) (common.Address, error) {
 func (e *Engine) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header) error {
 	log.Info("PoUW VerifyHeader called", "number", header.Number)
 
-	if header.Number.Uint64() == 0 {
-		return nil
-	}
+	// if header.Number.Uint64() == 0 {
+	// 	return nil
+	// }
 
-	if header.PoUWLoss == nil {
-		return errors.New("missing PoUWLoss")
-	}
-	if header.PoUWCommitment == nil {
-		return errors.New("missing PoUWCommitment")
-	}
+	// if header.PoUWLoss == nil {
+	// 	return errors.New("missing PoUWLoss")
+	// }
+	// if header.PoUWCommitment == nil {
+	// 	return errors.New("missing PoUWCommitment")
+	// }
 
 	// epoch := e.EpochNumber(header.Number.Uint64())
 	// validators := e.RandomValidators(epoch, 3)

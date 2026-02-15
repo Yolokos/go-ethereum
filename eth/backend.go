@@ -25,7 +25,9 @@ import (
 	"sync"
 	"time"
 
+	// "github.com/ethereum/go-ethereum/consensus/beacon"
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/consensus/pouw"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -226,11 +228,29 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if config.OverrideVerkle != nil {
 		overrides.OverrideVerkle = config.OverrideVerkle
 	}
+
 	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, config.Genesis, &overrides, eth.engine, vmConfig, &config.TransactionHistory)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Info("Created new block chain")
+	log.Info("Engine concrete type", "type", fmt.Sprintf("%T", eth.engine))
+	// panic("HERE")
+	switch eng := eth.engine.(type) {
+
+	case *pouw.Engine:
+		log.Info("PoUW consensus engine initialized (direct)")
+		stopCh := make(chan struct{})
+		go eng.StartBlockProducer(eth.blockchain, 5*time.Second, stopCh)
+
+	// case *beacon.Beacon:
+	// 	log.Info("Beacon wrapper detected")
+
+	// 	if inner, ok := eng.(interface{ EthOne() consensus.Engine }); ok {
+	// 		_ = inner
+	// 	}
+	}
 	// Initialize filtermaps log index.
 	fmConfig := filtermaps.Config{
 		History:        config.LogHistory,

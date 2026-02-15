@@ -33,7 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
-	// "github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -173,8 +173,9 @@ func CreateConsensusEngine(config *params.ChainConfig, db ethdb.Database) (conse
 	// 	log.Error("Geth only supports PoS networks. Please transition legacy networks using Geth v1.13.x.")
 	// 	return nil, fmt.Errorf("'terminalTotalDifficulty' is not set in genesis block")
 	// }
-
+	log.Info("ChainConfig PoUW", "value", config.PoUW)
 	if config.PoUW != nil {
+		log.Warn("PoUW is an experimental consensus engine, use at your own risk")
 		return pouw.New(config, db), nil
 	}
 
