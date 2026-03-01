@@ -210,6 +210,8 @@ func (api *ConsensusAPI) ForkchoiceUpdatedV1(update engine.ForkchoiceStateV1, pa
 // attributes. It supports both PayloadAttributesV1 and PayloadAttributesV2.
 func (api *ConsensusAPI) ForkchoiceUpdatedV2(update engine.ForkchoiceStateV1, params *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	if params != nil {
+		log.Info("Forkchoice V2 payload received", "params", params)
+
 		if params.BeaconRoot != nil {
 			return engine.STATUS_INVALID, engine.InvalidPayloadAttributes.With(errors.New("unexpected beacon root"))
 		}
@@ -233,7 +235,10 @@ func (api *ConsensusAPI) ForkchoiceUpdatedV2(update engine.ForkchoiceStateV1, pa
 // in the payload attributes. It supports only PayloadAttributesV3.
 func (api *ConsensusAPI) ForkchoiceUpdatedV3(update engine.ForkchoiceStateV1, params *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	if params != nil {
+		log.Info("Forkchoice V3 payload received", "params", params)
+		// log.Info("LatestFork", "fork", api.eth.BlockChain().Config().LatestFork(params.Timestamp))
 		if params.Withdrawals == nil {
+			log.Info("Forkchoice V3 Withdrawals missing",  "params", params.Withdrawals)
 			return engine.STATUS_INVALID, engine.InvalidPayloadAttributes.With(errors.New("missing withdrawals"))
 		}
 		if params.BeaconRoot == nil {
@@ -268,6 +273,7 @@ func (api *ConsensusAPI) ForkchoiceUpdatedWithWitnessV1(update engine.Forkchoice
 // generates an execution witness too if block building was requested.
 func (api *ConsensusAPI) ForkchoiceUpdatedWithWitnessV2(update engine.ForkchoiceStateV1, params *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	if params != nil {
+		log.Info("Forkchoice V2 Witness payload received", "params", params)
 		if params.BeaconRoot != nil {
 			return engine.STATUS_INVALID, engine.InvalidPayloadAttributes.With(errors.New("unexpected beacon root"))
 		}
@@ -291,6 +297,8 @@ func (api *ConsensusAPI) ForkchoiceUpdatedWithWitnessV2(update engine.Forkchoice
 // generates an execution witness too if block building was requested.
 func (api *ConsensusAPI) ForkchoiceUpdatedWithWitnessV3(update engine.ForkchoiceStateV1, params *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	if params != nil {
+		log.Info("Forkchoice V3 Witness payload received", "params", params)
+
 		if params.Withdrawals == nil {
 			return engine.STATUS_INVALID, engine.InvalidPayloadAttributes.With(errors.New("missing withdrawals"))
 		}

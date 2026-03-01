@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"slices"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -75,13 +76,10 @@ type ExecutableData struct {
 	BaseFeePerGas    *big.Int                `json:"baseFeePerGas" gencodec:"required"`
 	BlockHash        common.Hash             `json:"blockHash"     gencodec:"required"`
 	Transactions     [][]byte                `json:"transactions"  gencodec:"required"`
-	// REMOVED
 	Withdrawals      []*types.Withdrawal     `json:"withdrawals"`
 	BlobGasUsed      *uint64                 `json:"blobGasUsed"`
 	ExcessBlobGas    *uint64                 `json:"excessBlobGas"`
 	ExecutionWitness *types.ExecutionWitness `json:"executionWitness,omitempty"`
-	PoUWCommitment   *common.Hash             `json:"pouwCommitment"`
-	PoUWLoss         *uint64                  `json:"pouwLoss"`
 }
 
 // JSON type overrides for executableData.
@@ -96,8 +94,6 @@ type executableDataMarshaling struct {
 	Transactions  []hexutil.Bytes
 	BlobGasUsed   *hexutil.Uint64
 	ExcessBlobGas *hexutil.Uint64
-	PoUWCommitment hexutil.Bytes
-	PoUWLoss       hexutil.Uint64
 }
 
 // StatelessPayloadStatusV1 is the result of a stateless payload execution.
@@ -226,6 +222,7 @@ func decodeTransactions(enc [][]byte) ([]*types.Transaction, error) {
 // Withdrawals value must be passed via non-nil, length 0 value in data.
 func ExecutableDataToBlock(data ExecutableData, versionedHashes []common.Hash, beaconRoot *common.Hash, requests [][]byte) (*types.Block, error) {
 	block, err := ExecutableDataToBlockNoHash(data, versionedHashes, beaconRoot, requests)
+
 	if err != nil {
 		return nil, err
 	}
@@ -301,12 +298,138 @@ func ExecutableDataToBlockNoHash(data ExecutableData, versionedHashes []common.H
 		BlobGasUsed:      data.BlobGasUsed,
 		ParentBeaconRoot: beaconRoot,
 		RequestsHash:     requestsHash,
-		
-		PoUWCommitment:   data.PoUWCommitment,
-		PoUWLoss:         data.PoUWLoss,
 	}
+
+	headerHash := header.Hash()
+
+	log.Info("STAGE 1: header hash only",
+		"headerHash", headerHash,
+		"withdrawalsNil", data.Withdrawals == nil,
+		"withdrawalsLen", len(data.Withdrawals),
+	)
+
+	// 2️⃣ После NewBlockWithHeader
+	b1 := types.NewBlockWithHeader(header)
+	log.Info("STAGE 2: after NewBlockWithHeader",
+		"hash", b1.Hash(),
+	)
+
+	log.Info("Data fields", "full object", data);
+	// log.Info("DATA FIELDS FULL",
+	// 	"blockHash_from_CL", data.BlockHash,
+
+	// 	"parentHash", data.ParentHash,
+	// 	"feeRecipient", data.FeeRecipient,
+	// 	"stateRoot", data.StateRoot,
+	// 	"receiptsRoot", data.ReceiptsRoot,
+	// 	"logsBloom", data.LogsBloom,
+	// 	"prevRandao", data.Random,
+
+	// 	"blockNumber", data.Number,
+	// 	"gasLimit", data.GasLimit,
+	// 	"gasUsed", data.GasUsed,
+	// 	"timestamp", data.Timestamp,
+	// 	"baseFee", data.BaseFeePerGas,
+	// 	"extraData", common.Bytes2Hex(data.ExtraData),
+
+	// 	"txCount", len(data.Transactions),
+	// 	"withdrawalsCount", func() int {
+	// 		if data.Withdrawals == nil { return -1 }
+	// 		return len(data.Withdrawals)
+	// 	}(),
+
+	// 	"blobGasUsed_nil", data.BlobGasUsed == nil,
+	// 	"blobGasUsed_val", func() interface{} {
+	// 		if data.BlobGasUsed == nil { return nil }
+	// 		return *data.BlobGasUsed
+	// 	}(),
+
+	// 	"excessBlobGas_nil", data.ExcessBlobGas == nil,
+	// 	"excessBlobGas_val", func() interface{} {
+	// 		if data.ExcessBlobGas == nil { return nil }
+	// 		return *data.ExcessBlobGas
+	// 	}(),
+	// )
+
+	log.Info("Header fields", "full object", header);
+
+	// log.Info("HEADER FIELDS FULL",
+	// 	"calculatedHash", header.Hash(),
+
+	// 	"parentHash", header.ParentHash,
+	// 	"uncleHash", header.UncleHash,
+	// 	"coinbase", header.Coinbase,
+	// 	"stateRoot", header.Root,
+	// 	"txRoot", header.TxHash,
+	// 	"receiptsRoot", header.ReceiptHash,
+	// 	"bloom", header.Bloom,
+	// 	"difficulty", header.Difficulty,
+	// 	"number", header.Number,
+	// 	"gasLimit", header.GasLimit,
+	// 	"gasUsed", header.GasUsed,
+	// 	"timestamp", header.Time,
+	// 	"baseFee", header.BaseFee,
+	// 	"mixDigest", header.MixDigest,
+	// 	"nonce", header.Nonce,
+	// 	"extraData", common.Bytes2Hex(header.Extra),
+
+	// 	"withdrawalsRoot_nil", header.WithdrawalsHash == nil,
+	// 	"withdrawalsRoot_val", header.WithdrawalsHash,
+
+	// 	"blobGasUsed_nil", header.BlobGasUsed == nil,
+	// 	"blobGasUsed_val", func() interface{} {
+	// 		if header.BlobGasUsed == nil { return nil }
+	// 		return *header.BlobGasUsed
+	// 	}(),
+
+	// 	"excessBlobGas_nil", header.ExcessBlobGas == nil,
+	// 	"excessBlobGas_val", func() interface{} {
+	// 		if header.ExcessBlobGas == nil { return nil }
+	// 		return *header.ExcessBlobGas
+	// 	}(),
+
+	// 	"parentBeaconRoot_nil", header.ParentBeaconRoot == nil,
+	// 	"parentBeaconRoot_val", header.ParentBeaconRoot,
+
+	// 	"requestsHash_nil", header.RequestsHash == nil,
+	// 	"requestsHash_val", header.RequestsHash,
+	// )
+
+	log.Info("DERIVED ROOTS",
+		"txRoot", types.DeriveSha(types.Transactions(txs), trie.NewStackTrie(nil)),
+		"withdrawalsRootDerived", func() interface{} {
+			if data.Withdrawals == nil {
+				return nil
+			}
+			h := types.DeriveSha(types.Withdrawals(data.Withdrawals), trie.NewStackTrie(nil))
+			return h
+		}(),
+		"receiptRootFromCL", data.ReceiptsRoot,
+	)
+
+	// 3️⃣ После WithBody
+	b2 := b1.WithBody(types.Body{
+		Transactions: txs,
+		Uncles:       nil,
+		Withdrawals:  data.Withdrawals,
+	})
+	log.Info("STAGE 3: after WithBody",
+		"hash", b2.Hash(),
+	)
+
+	// 4️⃣ После WithWitness
+	b3 := b2.WithWitness(data.ExecutionWitness)
+	log.Info("STAGE 4: after WithWitness",
+		"hash", b3.Hash(),
+	)
+
+	// 5️⃣ Что ожидал CL
+	log.Info("CL expected hash",
+		"blockHash_from_CL", data.BlockHash,
+	)
+
 	return types.NewBlockWithHeader(header).
-			WithBody(types.Body{Transactions: txs, Uncles: nil/*, Withdrawals: data.Withdrawals}*/}).
+			WithBody(types.Body{Transactions: txs, Uncles: nil, Withdrawals: data.Withdrawals}).
 			WithWitness(data.ExecutionWitness),
 		nil
 }
@@ -333,9 +456,16 @@ func BlockToExecutableData(block *types.Block, fees *big.Int, sidecars []*types.
 		BlobGasUsed:      block.BlobGasUsed(),
 		ExcessBlobGas:    block.ExcessBlobGas(),
 		ExecutionWitness: block.ExecutionWitness(),
-		PoUWCommitment:   block.PoUWCommitment(),
-		PoUWLoss:         block.PoUWLoss(),
 	}
+
+	// log.Info("BlockToExecutableData",
+	// 	"number", block.Number(),
+	// 	"hash", block.Hash(),
+	// 	"parentHash", block.ParentHash(),
+	// 	"blobGasUsed", block.BlobGasUsed(),
+	// 	"excessBlobGas", block.ExcessBlobGas(),
+	// 	"beaconRoot", block.BeaconRoot(),
+	// )
 
 	// Add blobs.
 	bundle := BlobsBundleV1{

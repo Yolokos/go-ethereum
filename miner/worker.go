@@ -220,6 +220,19 @@ func (miner *Miner) prepareWork(genParams *generateParams, witness bool) (*envir
 		header.ExcessBlobGas = &excessBlobGas
 		header.ParentBeaconRoot = genParams.beaconRoot
 	}
+
+	// log.Info("PrepareWork header",
+	// 	"number", header.Number,
+	// 	"time", header.Time,
+	// 	"parentNumber", parent.Number,
+	// 	"parentTime", parent.Time,
+	// 	"parentHash", parent.Hash(),
+	// 	"parentIsCancun", miner.chainConfig.IsCancun(parent.Number, parent.Time),
+	// 	"currentIsCancun", miner.chainConfig.IsCancun(header.Number, header.Time),
+	// 	"blobGasUsed", header.BlobGasUsed,
+	// 	"excessBlobGas", header.ExcessBlobGas,
+	// 	"beaconRoot", genParams.beaconRoot,
+	// )
 	// Could potentially happen if starting to mine in an odd state.
 	// Note genParams.coinbase can be different with header.Coinbase
 	// since clique algorithm can modify the coinbase field in header.

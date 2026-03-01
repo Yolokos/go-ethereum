@@ -220,6 +220,7 @@ func (miner *Miner) buildPayload(args *BuildPayloadArgs, witness bool) (*Payload
 		beaconRoot:  args.BeaconRoot,
 		noTxs:       true,
 	}
+
 	empty := miner.generateWork(emptyParams, witness)
 	if empty.err != nil {
 		return nil, empty.err
