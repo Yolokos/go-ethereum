@@ -32,6 +32,7 @@ var (
 	HoleskyGenesisHash = common.HexToHash("0xb5f7f912443c940f21fd611f12828d75b534364ed9e95ca4e307729a4661bde4")
 	SepoliaGenesisHash = common.HexToHash("0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9")
 	HoodiGenesisHash   = common.HexToHash("0xbbe312868b376a3001692a646dd2d7d1e4406380dfd86b98aa8a34d1557c971b")
+	YaiGenesisHash    = common.HexToHash("0x07c1a8fddf8d7cbf84d519c47424ee238ef08ae1b35942b86d199457cdd8d1c9")
 )
 
 func newUint64(val uint64) *uint64 { return &val }
@@ -363,6 +364,40 @@ var (
 		Ethash:                  new(EthashConfig),
 		Clique:                  nil,
 	}
+
+	YaiChainConfig = &ChainConfig{
+		ChainID: big.NewInt(12345),
+
+		HomesteadBlock:      big.NewInt(0),
+		DAOForkBlock:        big.NewInt(0),
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		MuirGlacierBlock:    big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		LondonBlock:         big.NewInt(0),
+		ArrowGlacierBlock:   big.NewInt(0),
+		GrayGlacierBlock:    big.NewInt(0),
+		MergeNetsplitBlock:  big.NewInt(0),
+
+		TerminalTotalDifficulty: big.NewInt(0),
+
+		ShanghaiTime: newUint64(0),
+		CancunTime:   newUint64(0),
+
+		DepositContractAddress: common.HexToAddress("0x4242424242424242424242424242424242424242"),
+
+		PoUW: new(PoUWConfig),
+
+		BlobScheduleConfig: &BlobScheduleConfig{
+			Cancun: DefaultCancunBlobConfig,
+		},
+	}
+
 	TestRules = TestChainConfig.Rules(new(big.Int), false, 0)
 )
 
@@ -423,6 +458,7 @@ var NetworkNames = map[string]string{
 	SepoliaChainConfig.ChainID.String(): "sepolia",
 	HoleskyChainConfig.ChainID.String(): "holesky",
 	HoodiChainConfig.ChainID.String():   "hoodi",
+	YaiChainConfig.ChainID.String():    "yai",
 }
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -490,7 +526,16 @@ type ChainConfig struct {
 	// Various consensus engines
 	Ethash             *EthashConfig       `json:"ethash,omitempty"`
 	Clique             *CliqueConfig       `json:"clique,omitempty"`
+	PoUW               *PoUWConfig         `json:"pouw,omitempty"`
 	BlobScheduleConfig *BlobScheduleConfig `json:"blobSchedule,omitempty"`
+}
+
+// PoUWConfig is the consensus engine configs for proof-of-stake based sealing.
+type PoUWConfig struct {}
+
+// String implements the stringer interface, returning the consensus engine details.
+func (c PoUWConfig) String() string {
+	return "pouw"
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -613,6 +658,8 @@ func (c *ChainConfig) Description() string {
 	}
 	banner += fmt.Sprintf("Chain ID:  %v (%s)\n", c.ChainID, network)
 	switch {
+	case c.PoUW != nil:
+		banner += "Consensus: PoUW (Proof-of-Useful-Work)\n"
 	case c.Ethash != nil:
 		banner += "Consensus: Beacon (proof-of-stake), merged from Ethash (proof-of-work)\n"
 	case c.Clique != nil:

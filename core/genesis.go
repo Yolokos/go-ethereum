@@ -657,6 +657,18 @@ func DefaultHoodiGenesisBlock() *Genesis {
 	}
 }
 
+func DefaultYaiGenesisBlock() *Genesis {
+    return &Genesis{
+        Config:     params.YaiChainConfig,
+        Nonce:      0,
+        Timestamp:  0,
+        ExtraData:  []byte("YAI Genesis"),
+        GasLimit:   30_000_000,
+        Difficulty: big.NewInt(0), // если post-merge
+        Alloc:      make(GenesisAlloc),
+    }
+}
+
 // DeveloperGenesisBlock returns the 'geth --dev' genesis block.
 func DeveloperGenesisBlock(gasLimit uint64, faucet *common.Address) *Genesis {
 	// Override the default period to the user requested one
