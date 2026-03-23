@@ -17,12 +17,21 @@
 package types
 
 import (
+	"encoding/binary"
 	"fmt"
 )
 
 const (
 	depositRequestSize = 192
 )
+
+type DepositRequest struct {
+	Pubkey                [48]byte
+	WithdrawalCredentials [32]byte
+	Amount                uint64
+	Signature             [96]byte
+	Index                 uint64
+}
 
 // DepositLogToRequest unpacks a serialized DepositEvent.
 func DepositLogToRequest(data []byte) ([]byte, error) {
@@ -61,4 +70,18 @@ func DepositLogToRequest(data []byte) ([]byte, error) {
 	// Index is 8 bytes.
 	copy(request[indexOffset:], data[b:b+8])
 	return request, nil
+}
+
+func DepositLogToStruct(data []byte) (*DepositRequest, error) {
+	reqBytes, err := DepositLogToRequest(data)
+	if err != nil {
+		return nil, err
+	}
+	var req DepositRequest
+	copy(req.Pubkey[:], reqBytes[0:48])
+	copy(req.WithdrawalCredentials[:], reqBytes[48:80])
+	req.Amount = binary.BigEndian.Uint64(reqBytes[80:88])
+	copy(req.Signature[:], reqBytes[88:184])
+	req.Index = binary.BigEndian.Uint64(reqBytes[184:192])
+	return &req, nil
 }

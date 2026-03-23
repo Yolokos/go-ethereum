@@ -32,7 +32,7 @@ var (
 	HoleskyGenesisHash = common.HexToHash("0xb5f7f912443c940f21fd611f12828d75b534364ed9e95ca4e307729a4661bde4")
 	SepoliaGenesisHash = common.HexToHash("0x25a5cc106eea7138acab33231d7160d69cb777ee0c2c553fcddf5138993e6dd9")
 	HoodiGenesisHash   = common.HexToHash("0xbbe312868b376a3001692a646dd2d7d1e4406380dfd86b98aa8a34d1557c971b")
-	YaiGenesisHash    = common.HexToHash("0x07c1a8fddf8d7cbf84d519c47424ee238ef08ae1b35942b86d199457cdd8d1c9")
+	YaiGenesisHash     = common.HexToHash("0x07c1a8fddf8d7cbf84d519c47424ee238ef08ae1b35942b86d199457cdd8d1c9")
 )
 
 func newUint64(val uint64) *uint64 { return &val }
@@ -390,8 +390,8 @@ var (
 		CancunTime:   newUint64(0),
 
 		DepositContractAddress: common.HexToAddress("0x4242424242424242424242424242424242424242"),
-
-		PoUW: new(PoUWConfig),
+		ScoreContractAddress:   common.HexToAddress("0x4040404040404040404040404040404040404040"),
+		PoUW:                   new(PoUWConfig),
 
 		BlobScheduleConfig: &BlobScheduleConfig{
 			Cancun: DefaultCancunBlobConfig,
@@ -458,7 +458,7 @@ var NetworkNames = map[string]string{
 	SepoliaChainConfig.ChainID.String(): "sepolia",
 	HoleskyChainConfig.ChainID.String(): "holesky",
 	HoodiChainConfig.ChainID.String():   "hoodi",
-	YaiChainConfig.ChainID.String():    "yai",
+	YaiChainConfig.ChainID.String():     "yai",
 }
 
 // ChainConfig is the core config which determines the blockchain settings.
@@ -509,7 +509,7 @@ type ChainConfig struct {
 	TerminalTotalDifficulty *big.Int `json:"terminalTotalDifficulty,omitempty"`
 
 	DepositContractAddress common.Address `json:"depositContractAddress,omitempty"`
-
+	ScoreContractAddress   common.Address `json:"scoreContractAddress,omitempty"`
 	// EnableVerkleAtGenesis is a flag that specifies whether the network uses
 	// the Verkle tree starting from the genesis block. If set to true, the
 	// genesis state will be committed using the Verkle tree, eliminating the
@@ -531,7 +531,7 @@ type ChainConfig struct {
 }
 
 // PoUWConfig is the consensus engine configs for proof-of-stake based sealing.
-type PoUWConfig struct {}
+type PoUWConfig struct{}
 
 // String implements the stringer interface, returning the consensus engine details.
 func (c PoUWConfig) String() string {
@@ -1251,6 +1251,7 @@ func (c *ChainConfig) ActiveSystemContracts(time uint64) map[string]common.Addre
 	if fork >= forks.Prague {
 		active["CONSOLIDATION_REQUEST_PREDEPLOY_ADDRESS"] = ConsolidationQueueAddress
 		active["DEPOSIT_CONTRACT_ADDRESS"] = c.DepositContractAddress
+		active["SCORE_CONTRACT_ADDRESS"] = c.ScoreContractAddress
 		active["HISTORY_STORAGE_ADDRESS"] = HistoryStorageAddress
 		active["WITHDRAWAL_REQUEST_PREDEPLOY_ADDRESS"] = WithdrawalQueueAddress
 	}

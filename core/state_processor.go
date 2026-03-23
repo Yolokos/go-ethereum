@@ -22,12 +22,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/core/score"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/holiman/uint256"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -108,6 +110,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		receipts = append(receipts, receipt)
 		allLogs = append(allLogs, receipt.Logs...)
 	}
+
 	// Read requests if Prague is enabled.
 	var requests [][]byte
 	if config.IsPrague(block.Number(), block.Time()) {
@@ -115,6 +118,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		// EIP-6110
 		if err := ParseDepositLogs(&requests, allLogs, config); err != nil {
 			return nil, fmt.Errorf("failed to parse deposit logs: %w", err)
+		}
+		pubkeys, err := ExtractDepositPubkeys(allLogs, config)
+		if err != nil {
+			return nil, err
+		}
+		if err := ProcessValidatorRegistrations(pubkeys, evm, config); err != nil {
+			return nil, err
 		}
 		// EIP-7002
 		if err := ProcessWithdrawalQueue(&requests, evm); err != nil {
@@ -135,6 +145,50 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		Logs:     allLogs,
 		GasUsed:  *usedGas,
 	}, nil
+}
+
+func ProcessValidatorRegistrations(
+	pubkeys [][]byte,
+	evm *vm.EVM,
+	config *params.ChainConfig,
+) error {
+
+	system := common.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
+	value := uint256.NewInt(0)
+
+	for _, pubkey := range pubkeys {
+
+		existsData, err := score.GetABI().Pack("IsValidatorRegistered", pubkey)
+		if err != nil {
+			return err
+		}
+		res, _, err := evm.Call(system, config.ScoreContractAddress, existsData, 0, value)
+		if err != nil {
+			return err
+		}
+		exists := new(big.Int).SetBytes(res).Cmp(big.NewInt(0)) != 0
+		if exists {
+			continue
+		}
+
+		calldata, err := score.GetABI().Pack("RegisterValidator", pubkey)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = evm.Call(
+			system,
+			config.ScoreContractAddress,
+			calldata,
+			10_000_000,
+			value,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ApplyTransactionWithEVM attempts to apply a transaction to the given state database
@@ -334,6 +388,35 @@ func ParseDepositLogs(requests *[][]byte, logs []*types.Log, config *params.Chai
 		*requests = append(*requests, deposits)
 	}
 	return nil
+}
+
+func ExtractDepositPubkeys(
+	logs []*types.Log,
+	config *params.ChainConfig,
+) ([][]byte, error) {
+
+	var pubkeys [][]byte
+
+	for _, log := range logs {
+
+		if log.Address != config.DepositContractAddress {
+			continue
+		}
+		if len(log.Topics) == 0 || log.Topics[0] != depositTopic {
+			continue
+		}
+
+		req, err := types.DepositLogToStruct(log.Data)
+		if err != nil {
+			return nil, err
+		}
+
+		pubkey := req.Pubkey
+
+		pubkeys = append(pubkeys, pubkey[:])
+	}
+
+	return pubkeys, nil
 }
 
 func onSystemCallStart(tracer *tracing.Hooks, ctx *tracing.VMContext) {
