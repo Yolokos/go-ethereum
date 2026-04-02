@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -157,7 +158,6 @@ func ProcessValidatorRegistrations(
 	value := uint256.NewInt(0)
 
 	for _, pubkey := range pubkeys {
-
 		existsData, err := score.GetABI().Pack("IsValidatorRegistered", pubkey)
 		if err != nil {
 			return err
@@ -171,7 +171,8 @@ func ProcessValidatorRegistrations(
 			continue
 		}
 
-		calldata, err := score.GetABI().Pack("RegisterValidator", pubkey)
+		key := crypto.Keccak256Hash(pubkey[:])
+		calldata, err := score.GetABI().Pack("RegisterValidator", key)
 		if err != nil {
 			return err
 		}
@@ -184,7 +185,10 @@ func ProcessValidatorRegistrations(
 			value,
 		)
 		if err != nil {
+			log.Printf("RegisterValidator call failed: %v", err)
 			return err
+		} else {
+			log.Printf("RegisterValidator call succeeded for pubkey: %x", pubkey)
 		}
 	}
 
