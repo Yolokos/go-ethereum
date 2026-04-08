@@ -21,6 +21,7 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core/score"
@@ -30,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/holiman/uint256"
 )
 
 // StateProcessor is a basic Processor, which takes care of transitioning
@@ -124,9 +124,9 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		if err != nil {
 			return nil, err
 		}
-		if err := ProcessValidatorRegistrations(pubkeys, evm, config); err != nil {
-			return nil, err
-		}
+		fmt.Printf("Found %d deposit pubkeys\n", len(pubkeys))
+		ProcessValidatorRegistration(evm, pubkeys, config.ScoreContractAddress, score.GetABI())
+
 		// EIP-7002
 		if err := ProcessWithdrawalQueue(&requests, evm); err != nil {
 			return nil, fmt.Errorf("failed to process withdrawal queue: %w", err)
@@ -136,7 +136,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 			return nil, fmt.Errorf("failed to process consolidation queue: %w", err)
 		}
 	}
-
+	log.Printf("BLOCK %d FINAL: totalGasUsed=%d, expectedGas=%d", blockNumber, *usedGas, block.GasLimit())
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
 	p.chain.Engine().Finalize(p.chain, header, tracingStateDB, block.Body())
 
@@ -148,47 +148,42 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}, nil
 }
 
-func ProcessValidatorRegistrations(
-	pubkeys [][]byte,
-	evm *vm.EVM,
-	config *params.ChainConfig,
-) error {
+func ProcessValidatorRegistration(evm *vm.EVM, pubkeys [][]byte, contract common.Address, abi abi.ABI) error {
+	for i, pubkey := range pubkeys {
+		fmt.Printf("Pubkey #%d: %x\n", i, pubkey)
+		key := crypto.Keccak256Hash(pubkey)
 
-	system := common.HexToAddress("0xffffffffffffffffffffffffffffffffffffffff")
-	value := uint256.NewInt(0)
-
-	for _, pubkey := range pubkeys {
-		existsData, err := score.GetABI().Pack("IsValidatorRegistered", pubkey)
+		calldata, err := abi.Pack("RegisterValidator", key)
 		if err != nil {
 			return err
 		}
-		res, _, err := evm.Call(system, config.ScoreContractAddress, existsData, 0, value)
-		if err != nil {
-			return err
-		}
-		exists := new(big.Int).SetBytes(res).Cmp(big.NewInt(0)) != 0
-		if exists {
-			continue
+
+		msg := &Message{
+			From:      params.SystemAddress,
+			GasLimit:  30_000_000,
+			GasPrice:  common.Big0,
+			GasFeeCap: common.Big0,
+			GasTipCap: common.Big0,
+			To:        &contract,
+			Data:      calldata,
 		}
 
-		key := crypto.Keccak256Hash(pubkey[:])
-		calldata, err := score.GetABI().Pack("RegisterValidator", key)
-		if err != nil {
-			return err
-		}
+		evm.SetTxContext(NewEVMTxContext(msg))
+		evm.StateDB.AddAddressToAccessList(contract)
 
 		_, _, err = evm.Call(
-			system,
-			config.ScoreContractAddress,
-			calldata,
-			10_000_000,
-			value,
+			msg.From,
+			*msg.To,
+			msg.Data,
+			msg.GasLimit,
+			common.U2560,
 		)
+
+		// 🔥 ОБЯЗАТЕЛЬНО
+		evm.StateDB.Finalise(true)
+
 		if err != nil {
-			log.Printf("RegisterValidator call failed: %v", err)
-			return err
-		} else {
-			log.Printf("RegisterValidator call succeeded for pubkey: %x", pubkey)
+			return fmt.Errorf("validator registration failed: %w", err)
 		}
 	}
 

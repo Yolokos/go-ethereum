@@ -8,14 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
-//go:embed ScoreContract.abi
-var scoreABIJson string
-
 var parsedABI abi.ABI
 
 func init() {
 	var err error
-	parsedABI, err = abi.JSON(strings.NewReader(scoreABIJson))
+	parsedABI, err = abi.JSON(strings.NewReader(ScoreMetaData.ABI))
 	if err != nil {
 		panic(err)
 	}
