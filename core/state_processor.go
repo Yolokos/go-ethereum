@@ -125,7 +125,10 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 			return nil, err
 		}
 		fmt.Printf("Found %d deposit pubkeys\n", len(pubkeys))
-		ProcessValidatorRegistration(evm, pubkeys, config.ScoreContractAddress, score.GetABI())
+		err = ProcessValidatorRegistration(evm, pubkeys, config.ScoreContractAddress, score.GetABI())
+		if err != nil {
+			return nil, fmt.Errorf("failed to process validator registration: %w", err)
+		}
 
 		// EIP-7002
 		if err := ProcessWithdrawalQueue(&requests, evm); err != nil {
@@ -158,8 +161,10 @@ func ProcessValidatorRegistration(evm *vm.EVM, pubkeys [][]byte, contract common
 			return err
 		}
 
+		systemAddress := common.HexToAddress("0x0000000000000000000000000000000000000000")
+
 		msg := &Message{
-			From:      params.SystemAddress,
+			From:      systemAddress,
 			GasLimit:  30_000_000,
 			GasPrice:  common.Big0,
 			GasFeeCap: common.Big0,
@@ -178,15 +183,12 @@ func ProcessValidatorRegistration(evm *vm.EVM, pubkeys [][]byte, contract common
 			msg.GasLimit,
 			common.U2560,
 		)
-
-		// 🔥 ОБЯЗАТЕЛЬНО
-		evm.StateDB.Finalise(true)
-
 		if err != nil {
 			return fmt.Errorf("validator registration failed: %w", err)
 		}
 	}
 
+	evm.StateDB.Finalise(true)
 	return nil
 }
 
