@@ -40,6 +40,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
 	"github.com/ethereum/go-ethereum/core/txpool/locals"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/validatorqueue"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
@@ -272,8 +273,8 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		overrides.OverrideVerkle = config.OverrideVerkle
 	}
 	options.Overrides = &overrides
-
-	eth.blockchain, err = core.NewBlockChain(chainDb, config.Genesis, eth.engine, options)
+	validatorQueue := &validatorqueue.Queue{}
+	eth.blockchain, err = core.NewBlockChain(chainDb, config.Genesis, eth.engine, options, validatorQueue)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +343,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	eth.dropper = newDropper(eth.p2pServer.MaxDialedConns(), eth.p2pServer.MaxInboundConns())
 
-	eth.miner = miner.New(eth, config.Miner, eth.engine)
+	eth.miner = miner.New(eth, config.Miner, eth.engine, validatorQueue)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 	eth.miner.SetPrioAddresses(config.TxPool.Locals)
 

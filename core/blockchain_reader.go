@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/validatorqueue"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/params"
@@ -188,6 +189,10 @@ func (bc *BlockChain) GetBlockByHash(hash common.Hash) *types.Block {
 		return nil
 	}
 	return bc.GetBlock(hash, number)
+}
+
+func (bc *BlockChain) ValidatorQueue() *validatorqueue.Queue {
+	return bc.validatorQueue
 }
 
 // GetBlockByNumber retrieves a block from the database by number, caching it

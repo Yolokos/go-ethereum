@@ -43,6 +43,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/txpool/blobpool"
 	"github.com/ethereum/go-ethereum/core/txpool/legacypool"
+	"github.com/ethereum/go-ethereum/core/validatorqueue"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/kzg4844"
@@ -2330,7 +2331,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readonly bool) (*core.BlockCh
 	}
 	options.VmConfig = vmcfg
 
-	chain, err := core.NewBlockChain(chainDb, gspec, engine, options)
+	chain, err := core.NewBlockChain(chainDb, gspec, engine, options, &validatorqueue.Queue{})
 	if err != nil {
 		Fatalf("Can't create BlockChain: %v", err)
 	}

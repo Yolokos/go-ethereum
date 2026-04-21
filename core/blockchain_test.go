@@ -70,7 +70,7 @@ func newCanonical(engine consensus.Engine, n int, full bool, scheme string) (eth
 	)
 	// Initialize a fresh chain with only a genesis block
 	options := DefaultConfig().WithStateScheme(scheme)
-	blockchain, _ := NewBlockChain(rawdb.NewMemoryDatabase(), genesis, engine, options)
+	blockchain, _ := NewBlockChain(rawdb.NewMemoryDatabase(), genesis, engine, options, nil)
 
 	// Create and inject the requested chain
 	if n == 0 {
@@ -1555,7 +1555,7 @@ func testBlockchainHeaderchainReorgConsistency(t *testing.T, scheme string) {
 	}
 	// Import the canonical and fork chain side by side, verifying the current block
 	// and current header consistency
-	chain, err := NewBlockChain(rawdb.NewMemoryDatabase(), genesis, engine, DefaultConfig().WithStateScheme(scheme))
+	chain, err := NewBlockChain(rawdb.NewMemoryDatabase(), genesis, engine, DefaultConfig().WithStateScheme(scheme), nil)
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}
@@ -1830,7 +1830,7 @@ func testSideImport(t *testing.T, numCanonBlocksInSidechain, blocksBetweenCommon
 		mergeBlock = gomath.MaxInt32
 	)
 	// Generate and import the canonical chain
-	chain, err := NewBlockChain(rawdb.NewMemoryDatabase(), gspec, engine, nil)
+	chain, err := NewBlockChain(rawdb.NewMemoryDatabase(), gspec, engine, nil, nil)
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}

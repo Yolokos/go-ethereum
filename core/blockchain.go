@@ -43,6 +43,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/validatorqueue"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -338,12 +339,14 @@ type BlockChain struct {
 	stateSizer *state.SizeTracker // State size tracking
 
 	lastForkReadyAlert time.Time // Last time there was a fork readiness print out
+
+	validatorQueue *validatorqueue.Queue
 }
 
 // NewBlockChain returns a fully initialised block chain using information
 // available in the database. It initialises the default Ethereum Validator
 // and Processor.
-func NewBlockChain(db ethdb.Database, genesis *Genesis, engine consensus.Engine, cfg *BlockChainConfig) (*BlockChain, error) {
+func NewBlockChain(db ethdb.Database, genesis *Genesis, engine consensus.Engine, cfg *BlockChainConfig, validatorQueue *validatorqueue.Queue) (*BlockChain, error) {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
@@ -394,7 +397,8 @@ func NewBlockChain(db ethdb.Database, genesis *Genesis, engine consensus.Engine,
 	bc.statedb = state.NewDatabase(bc.triedb, nil)
 	bc.validator = NewBlockValidator(chainConfig, bc)
 	bc.prefetcher = newStatePrefetcher(chainConfig, bc.hc)
-	bc.processor = NewStateProcessor(bc.hc)
+	bc.processor = NewStateProcessor(bc.hc, validatorQueue)
+	bc.validatorQueue = validatorQueue
 
 	genesisHeader := bc.GetHeaderByNumber(0)
 	if genesisHeader == nil {

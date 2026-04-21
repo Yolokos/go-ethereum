@@ -465,7 +465,7 @@ func newTestBackend(t *testing.T, n int, gspec *core.Genesis, engine consensus.E
 	// Generate blocks for testing
 	db, blocks, receipts := core.GenerateChainWithGenesis(gspec, engine, n+1, generator)
 
-	chain, err := core.NewBlockChain(db, gspec, engine, options)
+	chain, err := core.NewBlockChain(db, gspec, engine, options, nil)
 	if err != nil {
 		t.Fatalf("failed to create tester chain: %v", err)
 	}

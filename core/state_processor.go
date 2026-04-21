@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/tracing"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/validatorqueue"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
@@ -39,12 +40,14 @@ import (
 // StateProcessor implements Processor.
 type StateProcessor struct {
 	chain ChainContext // Chain context interface
+	queue *validatorqueue.Queue
 }
 
 // NewStateProcessor initialises a new StateProcessor.
-func NewStateProcessor(chain ChainContext) *StateProcessor {
+func NewStateProcessor(chain ChainContext, queue *validatorqueue.Queue) *StateProcessor {
 	return &StateProcessor{
 		chain: chain,
+		queue: queue,
 	}
 }
 
@@ -88,6 +91,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}
 	context = NewEVMBlockContext(header, p.chain, nil)
 	evm := vm.NewEVM(context, tracingStateDB, config, cfg)
+	keys := p.queue.PopAll()
+	log.Printf("Processing %d validator registrations from the queue\n", len(keys))
+	for _, key := range keys {
+		log.Printf("Processing validator registration for pubkey hash: %s\n", key.Hex())
+		ProcessRegisterValidator(evm, key)
+		log.Printf("Validator registration for pubkey hash %s processed\n", key.Hex())
+	}
 
 	if beaconRoot := block.BeaconRoot(); beaconRoot != nil {
 		ProcessBeaconBlockRoot(*beaconRoot, evm)
@@ -116,6 +126,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	var requests [][]byte
 	if config.IsPrague(block.Number(), block.Time()) {
 		requests = [][]byte{}
+		// var validatorRequests []common.Hash
 		// EIP-6110
 		if err := ParseDepositLogs(&requests, allLogs, config); err != nil {
 			return nil, fmt.Errorf("failed to parse deposit logs: %w", err)
@@ -125,11 +136,13 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 			return nil, err
 		}
 		fmt.Printf("Found %d deposit pubkeys\n", len(pubkeys))
-		err = ProcessValidatorRegistration(evm, pubkeys, config.ScoreContractAddress, score.GetABI())
-		if err != nil {
-			return nil, fmt.Errorf("failed to process validator registration: %w", err)
-		}
-
+		// for _, pubkey := range pubkeys {
+		// 	validatorRequests = append(validatorRequests, crypto.Keccak256Hash(pubkey))
+		// }
+		// if len(validatorRequests) > 0 {
+		// 	log.Printf("Adding %d validator registrations to the queue\n", len(validatorRequests))
+		// 	p.queue.Add(validatorRequests)
+		// }
 		// EIP-7002
 		if err := ProcessWithdrawalQueue(&requests, evm); err != nil {
 			return nil, fmt.Errorf("failed to process withdrawal queue: %w", err)
@@ -291,6 +304,36 @@ func ProcessBeaconBlockRoot(beaconRoot common.Hash, evm *vm.EVM) {
 	}
 	evm.SetTxContext(NewEVMTxContext(msg))
 	evm.StateDB.AddAddressToAccessList(params.BeaconRootsAddress)
+	_, _, _ = evm.Call(msg.From, *msg.To, msg.Data, 30_000_000, common.U2560)
+	evm.StateDB.Finalise(true)
+}
+
+// ProcessRegisterValidator to the register validator
+func ProcessRegisterValidator(evm *vm.EVM, key common.Hash) {
+	scoreAbi := score.GetABI()
+	calldata, err := scoreAbi.Pack("RegisterValidator", key)
+	if err != nil {
+		log.Printf("Failed to pack RegisterValidator calldata: %v", err)
+		return
+	}
+
+	if tracer := evm.Config.Tracer; tracer != nil {
+		onSystemCallStart(tracer, evm.GetVMContext())
+		if tracer.OnSystemCallEnd != nil {
+			defer tracer.OnSystemCallEnd()
+		}
+	}
+	msg := &Message{
+		From:      params.ScoreSystemAddress,
+		GasLimit:  30_000_000,
+		GasPrice:  common.Big0,
+		GasFeeCap: common.Big0,
+		GasTipCap: common.Big0,
+		To:        &params.ScoreContractAddress,
+		Data:      calldata,
+	}
+	evm.SetTxContext(NewEVMTxContext(msg))
+	evm.StateDB.AddAddressToAccessList(params.ScoreContractAddress)
 	_, _, _ = evm.Call(msg.From, *msg.To, msg.Data, 30_000_000, common.U2560)
 	evm.StateDB.Finalise(true)
 }

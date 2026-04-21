@@ -151,7 +151,7 @@ func createMiner(t *testing.T) *Miner {
 	// Create consensus engine
 	engine := clique.New(chainConfig.Clique, chainDB)
 	// Create Ethereum backend
-	bc, err := core.NewBlockChain(chainDB, genesis, engine, nil)
+	bc, err := core.NewBlockChain(chainDB, genesis, engine, nil, nil)
 	if err != nil {
 		t.Fatalf("can't create new chain %v", err)
 	}
@@ -163,6 +163,6 @@ func createMiner(t *testing.T) *Miner {
 
 	// Create Miner
 	backend := NewMockBackend(bc, txpool)
-	miner := New(backend, config, engine)
+	miner := New(backend, config, engine, nil)
 	return miner
 }

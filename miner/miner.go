@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/validatorqueue"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -65,26 +66,28 @@ var DefaultConfig = Config{
 // Miner is the main object which takes care of submitting new work to consensus
 // engine and gathering the sealing result.
 type Miner struct {
-	confMu      sync.RWMutex // The lock used to protect the config fields: GasCeil, GasTip and Extradata
-	config      *Config
-	chainConfig *params.ChainConfig
-	engine      consensus.Engine
-	txpool      *txpool.TxPool
-	prio        []common.Address // A list of senders to prioritize
-	chain       *core.BlockChain
-	pending     *pending
-	pendingMu   sync.Mutex // Lock protects the pending block
+	confMu         sync.RWMutex // The lock used to protect the config fields: GasCeil, GasTip and Extradata
+	config         *Config
+	chainConfig    *params.ChainConfig
+	engine         consensus.Engine
+	txpool         *txpool.TxPool
+	prio           []common.Address // A list of senders to prioritize
+	chain          *core.BlockChain
+	pending        *pending
+	pendingMu      sync.Mutex // Lock protects the pending block
+	validatorQueue *validatorqueue.Queue
 }
 
 // New creates a new miner with provided config.
-func New(eth Backend, config Config, engine consensus.Engine) *Miner {
+func New(eth Backend, config Config, engine consensus.Engine, validatorQueue *validatorqueue.Queue) *Miner {
 	return &Miner{
-		config:      &config,
-		chainConfig: eth.BlockChain().Config(),
-		engine:      engine,
-		txpool:      eth.TxPool(),
-		chain:       eth.BlockChain(),
-		pending:     &pending{},
+		config:         &config,
+		chainConfig:    eth.BlockChain().Config(),
+		engine:         engine,
+		txpool:         eth.TxPool(),
+		chain:          eth.BlockChain(),
+		pending:        &pending{},
+		validatorQueue: validatorQueue,
 	}
 }
 

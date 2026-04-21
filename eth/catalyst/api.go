@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/internal/version"
@@ -350,13 +351,14 @@ func (api *ConsensusAPI) forkchoiceUpdated(update engine.ForkchoiceStateV1, payl
 	// will replace it arbitrarily many times in between.
 	if payloadAttributes != nil {
 		args := &miner.BuildPayloadArgs{
-			Parent:       update.HeadBlockHash,
-			Timestamp:    payloadAttributes.Timestamp,
-			FeeRecipient: payloadAttributes.SuggestedFeeRecipient,
-			Random:       payloadAttributes.Random,
-			Withdrawals:  payloadAttributes.Withdrawals,
-			BeaconRoot:   payloadAttributes.BeaconRoot,
-			Version:      payloadVersion,
+			Parent:                 update.HeadBlockHash,
+			Timestamp:              payloadAttributes.Timestamp,
+			FeeRecipient:           payloadAttributes.SuggestedFeeRecipient,
+			Random:                 payloadAttributes.Random,
+			Withdrawals:            payloadAttributes.Withdrawals,
+			BeaconRoot:             payloadAttributes.BeaconRoot,
+			Version:                payloadVersion,
+			ValidatorRegistrations: payloadAttributes.ValidatorRegistrations,
 		}
 		id := args.Id()
 		// If we already are busy generating this work, then we do not need
@@ -364,6 +366,12 @@ func (api *ConsensusAPI) forkchoiceUpdated(update engine.ForkchoiceStateV1, payl
 		if api.localBlocks.has(id) {
 			return valid(&id), nil
 		}
+		var validatorRequests []common.Hash
+		for _, pubkey := range payloadAttributes.ValidatorRegistrations {
+			validatorRequests = append(validatorRequests, crypto.Keccak256Hash(pubkey))
+		}
+		log.Info("Validator requests length", "length", len(validatorRequests))
+		api.eth.BlockChain().ValidatorQueue().Add(validatorRequests)
 		payload, err := api.eth.Miner().BuildPayload(args, payloadWitness)
 		if err != nil {
 			log.Error("Failed to build payload", "err", err)
