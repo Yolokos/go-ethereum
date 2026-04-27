@@ -273,7 +273,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		overrides.OverrideVerkle = config.OverrideVerkle
 	}
 	options.Overrides = &overrides
-	validatorQueue := &validatorqueue.Queue{}
+	validatorQueue := validatorqueue.New()
 	eth.blockchain, err = core.NewBlockChain(chainDb, config.Genesis, eth.engine, options, validatorQueue)
 	if err != nil {
 		return nil, err

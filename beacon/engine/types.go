@@ -57,12 +57,12 @@ var (
 // PayloadAttributes describes the environment context in which a block should
 // be built.
 type PayloadAttributes struct {
-	Timestamp              uint64              `json:"timestamp"             gencodec:"required"`
-	Random                 common.Hash         `json:"prevRandao"            gencodec:"required"`
-	SuggestedFeeRecipient  common.Address      `json:"suggestedFeeRecipient" gencodec:"required"`
-	Withdrawals            []*types.Withdrawal `json:"withdrawals"`
-	BeaconRoot             *common.Hash        `json:"parentBeaconBlockRoot"`
-	ValidatorRegistrations [][]byte            `json:"validatorRegistrations"`
+	Timestamp              uint64                         `json:"timestamp"             gencodec:"required"`
+	Random                 common.Hash                    `json:"prevRandao"            gencodec:"required"`
+	SuggestedFeeRecipient  common.Address                 `json:"suggestedFeeRecipient" gencodec:"required"`
+	Withdrawals            []*types.Withdrawal            `json:"withdrawals"`
+	BeaconRoot             *common.Hash                   `json:"parentBeaconBlockRoot"`
+	ValidatorRegistrations []*types.ValidatorRegistration `json:"validatorRegistrations"`
 }
 
 // JSON type overrides for PayloadAttributes.

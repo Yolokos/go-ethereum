@@ -8,20 +8,35 @@ import (
 
 type Queue struct {
 	mu   sync.Mutex
-	data []common.Hash
+	data map[common.Hash]map[uint64][]common.Hash
 }
 
-func (q *Queue) Add(keys []common.Hash) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	q.data = append(q.data, keys...)
+func New() *Queue {
+	return &Queue{
+		data: make(map[common.Hash]map[uint64][]common.Hash),
+	}
 }
 
-func (q *Queue) PopAll() []common.Hash {
+func (q *Queue) Add(parent common.Hash, timestamp uint64, keys []common.Hash) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.data[parent] == nil {
+		q.data[parent] = make(map[uint64][]common.Hash)
+	}
+	q.data[parent][timestamp] = keys
+}
+
+func (q *Queue) Pop(parent common.Hash, timestamp uint64) []common.Hash {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	res := q.data
-	q.data = nil
+	if q.data[parent] == nil {
+		return nil
+	}
+	res := q.data[parent][timestamp]
+	delete(q.data[parent], timestamp)
+	if len(q.data[parent]) == 0 {
+		delete(q.data, parent)
+	}
 	return res
 }

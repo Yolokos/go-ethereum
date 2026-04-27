@@ -44,7 +44,7 @@ type BuildPayloadArgs struct {
 	Withdrawals            types.Withdrawals     // The provided withdrawals
 	BeaconRoot             *common.Hash          // The provided beaconRoot (Cancun)
 	Version                engine.PayloadVersion // Versioning byte for payload id calculation.
-	ValidatorRegistrations [][]byte
+	ValidatorRegistrations types.ValidatorRegistrations
 }
 
 // Id computes an 8-byte identifier by hashing the components of the payload arguments.
@@ -58,6 +58,7 @@ func (args *BuildPayloadArgs) Id() engine.PayloadID {
 	if args.BeaconRoot != nil {
 		hasher.Write(args.BeaconRoot[:])
 	}
+	rlp.Encode(hasher, args.ValidatorRegistrations)
 	var out engine.PayloadID
 	copy(out[:], hasher.Sum(nil)[:8])
 	out[0] = byte(args.Version)
@@ -208,18 +209,24 @@ func (payload *Payload) ResolveFull() *engine.ExecutionPayloadEnvelope {
 
 // buildPayload builds the payload according to the provided parameters.
 func (miner *Miner) buildPayload(args *BuildPayloadArgs, witness bool) (*Payload, error) {
+	var validatorRequests [][]byte
+	for _, reg := range args.ValidatorRegistrations {
+		validatorRequests = append(validatorRequests, reg.Pubkey)
+	}
+
 	// Build the initial version with no transaction included. It should be fast
 	// enough to run. The empty payload can at least make sure there is something
 	// to deliver for not missing slot.
 	emptyParams := &generateParams{
-		timestamp:   args.Timestamp,
-		forceTime:   true,
-		parentHash:  args.Parent,
-		coinbase:    args.FeeRecipient,
-		random:      args.Random,
-		withdrawals: args.Withdrawals,
-		beaconRoot:  args.BeaconRoot,
-		noTxs:       true,
+		timestamp:         args.Timestamp,
+		forceTime:         true,
+		parentHash:        args.Parent,
+		coinbase:          args.FeeRecipient,
+		random:            args.Random,
+		withdrawals:       args.Withdrawals,
+		beaconRoot:        args.BeaconRoot,
+		noTxs:             true,
+		validatorRequests: validatorRequests,
 	}
 	empty := miner.generateWork(emptyParams, witness)
 	if empty.err != nil {
@@ -242,14 +249,15 @@ func (miner *Miner) buildPayload(args *BuildPayloadArgs, witness bool) (*Payload
 		endTimer := time.NewTimer(time.Second * 12)
 
 		fullParams := &generateParams{
-			timestamp:   args.Timestamp,
-			forceTime:   true,
-			parentHash:  args.Parent,
-			coinbase:    args.FeeRecipient,
-			random:      args.Random,
-			withdrawals: args.Withdrawals,
-			beaconRoot:  args.BeaconRoot,
-			noTxs:       false,
+			timestamp:         args.Timestamp,
+			forceTime:         true,
+			parentHash:        args.Parent,
+			coinbase:          args.FeeRecipient,
+			random:            args.Random,
+			withdrawals:       args.Withdrawals,
+			beaconRoot:        args.BeaconRoot,
+			noTxs:             false,
+			validatorRequests: validatorRequests,
 		}
 
 		for {

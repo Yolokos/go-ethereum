@@ -16,11 +16,12 @@ var _ = (*payloadAttributesMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (p PayloadAttributes) MarshalJSON() ([]byte, error) {
 	type PayloadAttributes struct {
-		Timestamp             hexutil.Uint64      `json:"timestamp"             gencodec:"required"`
-		Random                common.Hash         `json:"prevRandao"            gencodec:"required"`
-		SuggestedFeeRecipient common.Address      `json:"suggestedFeeRecipient" gencodec:"required"`
-		Withdrawals           []*types.Withdrawal `json:"withdrawals"`
-		BeaconRoot            *common.Hash        `json:"parentBeaconBlockRoot"`
+		Timestamp              hexutil.Uint64                 `json:"timestamp"             gencodec:"required"`
+		Random                 common.Hash                    `json:"prevRandao"            gencodec:"required"`
+		SuggestedFeeRecipient  common.Address                 `json:"suggestedFeeRecipient" gencodec:"required"`
+		Withdrawals            []*types.Withdrawal            `json:"withdrawals"`
+		BeaconRoot             *common.Hash                   `json:"parentBeaconBlockRoot"`
+		ValidatorRegistrations []*types.ValidatorRegistration `json:"validatorRegistrations"`
 	}
 	var enc PayloadAttributes
 	enc.Timestamp = hexutil.Uint64(p.Timestamp)
@@ -28,17 +29,19 @@ func (p PayloadAttributes) MarshalJSON() ([]byte, error) {
 	enc.SuggestedFeeRecipient = p.SuggestedFeeRecipient
 	enc.Withdrawals = p.Withdrawals
 	enc.BeaconRoot = p.BeaconRoot
+	enc.ValidatorRegistrations = p.ValidatorRegistrations
 	return json.Marshal(&enc)
 }
 
 // UnmarshalJSON unmarshals from JSON.
 func (p *PayloadAttributes) UnmarshalJSON(input []byte) error {
 	type PayloadAttributes struct {
-		Timestamp             *hexutil.Uint64     `json:"timestamp"             gencodec:"required"`
-		Random                *common.Hash        `json:"prevRandao"            gencodec:"required"`
-		SuggestedFeeRecipient *common.Address     `json:"suggestedFeeRecipient" gencodec:"required"`
-		Withdrawals           []*types.Withdrawal `json:"withdrawals"`
-		BeaconRoot            *common.Hash        `json:"parentBeaconBlockRoot"`
+		Timestamp              *hexutil.Uint64                `json:"timestamp"             gencodec:"required"`
+		Random                 *common.Hash                   `json:"prevRandao"            gencodec:"required"`
+		SuggestedFeeRecipient  *common.Address                `json:"suggestedFeeRecipient" gencodec:"required"`
+		Withdrawals            []*types.Withdrawal            `json:"withdrawals"`
+		BeaconRoot             *common.Hash                   `json:"parentBeaconBlockRoot"`
+		ValidatorRegistrations []*types.ValidatorRegistration `json:"validatorRegistrations"`
 	}
 	var dec PayloadAttributes
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -61,6 +64,9 @@ func (p *PayloadAttributes) UnmarshalJSON(input []byte) error {
 	}
 	if dec.BeaconRoot != nil {
 		p.BeaconRoot = dec.BeaconRoot
+	}
+	if dec.ValidatorRegistrations != nil {
+		p.ValidatorRegistrations = dec.ValidatorRegistrations
 	}
 	return nil
 }

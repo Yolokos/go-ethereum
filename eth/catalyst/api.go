@@ -208,6 +208,10 @@ func (api *ConsensusAPI) ForkchoiceUpdatedV2(update engine.ForkchoiceStateV1, pa
 // in the payload attributes. It supports only PayloadAttributesV3.
 func (api *ConsensusAPI) ForkchoiceUpdatedV3(update engine.ForkchoiceStateV1, params *engine.PayloadAttributes) (engine.ForkChoiceResponse, error) {
 	if params != nil {
+		log.Info("FCU V3 incoming",
+			"validatorRegistrations", len(params.ValidatorRegistrations),
+		)
+
 		switch {
 		case params.Withdrawals == nil:
 			return engine.STATUS_INVALID, attributesErr("missing withdrawals")
@@ -217,6 +221,7 @@ func (api *ConsensusAPI) ForkchoiceUpdatedV3(update engine.ForkchoiceStateV1, pa
 			return engine.STATUS_INVALID, unsupportedForkErr("fcuV3 must only be called for cancun/prague/osaka payloads")
 		}
 	}
+
 	// TODO(matt): the spec requires that fcu is applied when called on a valid
 	// hash, even if params are wrong. To do this we need to split up
 	// forkchoiceUpdate into a function that only updates the head and then a
@@ -350,6 +355,7 @@ func (api *ConsensusAPI) forkchoiceUpdated(update engine.ForkchoiceStateV1, payl
 	// sealed by the beacon client. The payload will be requested later, and we
 	// will replace it arbitrarily many times in between.
 	if payloadAttributes != nil {
+		log.Info("Payload attributes: ", "validatorRegistrations", len(payloadAttributes.ValidatorRegistrations))
 		args := &miner.BuildPayloadArgs{
 			Parent:                 update.HeadBlockHash,
 			Timestamp:              payloadAttributes.Timestamp,
@@ -367,11 +373,11 @@ func (api *ConsensusAPI) forkchoiceUpdated(update engine.ForkchoiceStateV1, payl
 			return valid(&id), nil
 		}
 		var validatorRequests []common.Hash
-		for _, pubkey := range payloadAttributes.ValidatorRegistrations {
-			validatorRequests = append(validatorRequests, crypto.Keccak256Hash(pubkey))
+		for _, reg := range payloadAttributes.ValidatorRegistrations {
+			validatorRequests = append(validatorRequests, crypto.Keccak256Hash(reg.Pubkey))
 		}
 		log.Info("Validator requests length", "length", len(validatorRequests))
-		api.eth.BlockChain().ValidatorQueue().Add(validatorRequests)
+		api.eth.BlockChain().ValidatorQueue().Add(update.HeadBlockHash, payloadAttributes.Timestamp, validatorRequests)
 		payload, err := api.eth.Miner().BuildPayload(args, payloadWitness)
 		if err != nil {
 			log.Error("Failed to build payload", "err", err)

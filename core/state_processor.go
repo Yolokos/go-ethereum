@@ -91,7 +91,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}
 	context = NewEVMBlockContext(header, p.chain, nil)
 	evm := vm.NewEVM(context, tracingStateDB, config, cfg)
-	keys := p.queue.PopAll()
+	keys := p.queue.Pop(block.ParentHash(), block.Time())
 	log.Printf("Processing %d validator registrations from the queue\n", len(keys))
 	for _, key := range keys {
 		log.Printf("Processing validator registration for pubkey hash: %s\n", key.Hex())

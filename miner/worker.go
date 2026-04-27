@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/misc/eip1559"
 	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/score"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/stateless"
 	"github.com/ethereum/go-ethereum/core/txpool"
@@ -249,14 +248,14 @@ func (miner *Miner) prepareWork(genParams *generateParams, witness bool) (*envir
 	// Note genParams.coinbase can be different with header.Coinbase
 	// since clique algorithm can modify the coinbase field in header.
 	env, err := miner.makeEnv(parent, header, genParams.coinbase, witness)
+	if err != nil {
+		log.Error("Failed to create sealing context", "err", err)
+		return nil, err
+	}
 
 	for _, pubkey := range genParams.validatorRequests {
 		key := crypto.Keccak256Hash(pubkey)
 		core.ProcessRegisterValidator(env.evm, key)
-	}
-	if err != nil {
-		log.Error("Failed to create sealing context", "err", err)
-		return nil, err
 	}
 	if header.ParentBeaconRoot != nil {
 		core.ProcessBeaconBlockRoot(*header.ParentBeaconRoot, env.evm)
@@ -477,57 +476,6 @@ func (miner *Miner) fillTransactions(interrupt *atomic.Int32, env *environment) 
 	tip := miner.config.GasPrice
 	prio := miner.prio
 	miner.confMu.RUnlock()
-
-	keys := miner.validatorQueue.PopAll()
-	log.Info("Popped validators", "count", len(keys))
-
-	chainConfig := miner.chainConfig
-	systemAddress := common.HexToAddress("0x0000000000000000000000000000000000000000")
-	abi := score.GetABI()
-
-	for _, key := range keys {
-		calldata, err := abi.Pack("RegisterValidator", key)
-		if err != nil {
-			log.Error("ABI pack failed", "err", err)
-			continue
-		}
-
-		msg := &core.Message{
-			From:      systemAddress,
-			To:        &chainConfig.ScoreContractAddress,
-			GasLimit:  300000,
-			GasPrice:  common.Big0,
-			GasFeeCap: common.Big0,
-			GasTipCap: common.Big0,
-			Value:     common.Big0,
-			Data:      calldata,
-		}
-
-		// ✅ tx context (обязательно)
-		env.evm.SetTxContext(core.NewEVMTxContext(msg))
-
-		// ✅ access list (опционально, но правильно)
-		env.state.AddAddressToAccessList(chainConfig.ScoreContractAddress)
-
-		// ❗ ВАЖНО: никакого gasPool
-		_, _, err = env.evm.Call(
-			msg.From,
-			*msg.To,
-			msg.Data,
-			msg.GasLimit,
-			common.U2560,
-		)
-
-		if err != nil {
-			log.Error("system call failed", "err", err)
-			continue
-		}
-
-		// ✅ финализируем изменения state
-		env.state.Finalise(true)
-
-		log.Info("System validator registered", "key", key)
-	}
 
 	// Retrieve the pending transactions pre-filtered by the 1559/4844 dynamic fees
 	filter := txpool.PendingFilter{
